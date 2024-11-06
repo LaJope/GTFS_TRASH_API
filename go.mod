@@ -1,4 +1,4 @@
-module test
+module github.com/LaJope/GTFS_TRASH_API.git
 
 go 1.23.1
 
