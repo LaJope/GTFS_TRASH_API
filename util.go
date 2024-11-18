@@ -25,7 +25,9 @@ const (
 func getGTFSFeed(w http.ResponseWriter, req *http.Request) {
 	_, err := os.Stat(FEED_DIR)
 	if errors.Is(err, os.ErrNotExist) {
-		_ = os.Mkdir(FEED_DIR, os.ModePerm)
+    if err = os.Mkdir(FEED_DIR, os.ModePerm); err != nil {
+			log.Fatal(err)
+    }
 	}
 
 	feedZip := getFeedZipArchive()
@@ -36,10 +38,10 @@ func getGTFSFeed(w http.ResponseWriter, req *http.Request) {
 		log.Fatal(err)
 	}
 
-	for _, f := range zipReader.File {
-		path := filepath.Join(FEED_DIR, f.Name)
+	for _, file := range zipReader.File {
+		path := filepath.Join(FEED_DIR, file.Name)
 
-		if f.FileInfo().IsDir() {
+		if file.FileInfo().IsDir() {
 			_ = os.MkdirAll(path, os.ModePerm)
 			continue
 		}
@@ -49,12 +51,12 @@ func getGTFSFeed(w http.ResponseWriter, req *http.Request) {
 		}
 
 		dstFile, err :=
-			os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+			os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		fileInArchive, err := f.Open()
+		fileInArchive, err := file.Open()
 		if err != nil {
 			log.Fatal(err)
 		}

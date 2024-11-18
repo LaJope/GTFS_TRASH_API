@@ -40,7 +40,7 @@ func getFeedZipArchive() []byte {
 	return body
 }
 
-func getStopForecastRealtimeInfo(stopID int64) []map[string]interface{} {
+func getStopForecastRealtimeInfo(stopID int64) []stopRealtimeInfo {
 	url := fmt.Sprintf("%s/realtime/stopforecast?stopID=%d", GTFS_URL, stopID)
 	client := &http.Client{}
 
@@ -66,22 +66,22 @@ func getStopForecastRealtimeInfo(stopID int64) []map[string]interface{} {
 		log.Fatal(err)
 	}
 
-	stopInfo := make([]map[string]interface{}, 0)
+	stopInfo := make([]stopRealtimeInfo, 0)
 
 	for _, entity := range feed.Entity {
-		entityInfo := make(map[string]interface{})
+		var entityInfo stopRealtimeInfo
 
 		tripUpdate := entity.GetTripUpdate()
 		trip := tripUpdate.GetTrip()
 		vehicle := tripUpdate.GetVehicle()
 		stopTimeUpdate := tripUpdate.GetStopTimeUpdate()
 
-		entityInfo["route_id"], _ =
+		entityInfo.Route_id, _ =
 			strconv.ParseInt(trip.GetRouteId(), 10, 0)
-		entityInfo["vehicle_id"], _ =
+		entityInfo.Vehicle_id, _ =
 			strconv.ParseInt(vehicle.GetId(), 10, 0)
-		entityInfo["arrival"] =
-			time.Unix(stopTimeUpdate[0].GetArrival().GetTime(), 0)
+		stopTime := time.Unix(stopTimeUpdate[0].GetArrival().GetTime(), 0)
+		entityInfo.Arrival = stopTime.Format(time.UnixDate)
 
 		stopInfo = append(stopInfo, entityInfo)
 	}
@@ -89,7 +89,7 @@ func getStopForecastRealtimeInfo(stopID int64) []map[string]interface{} {
 	return stopInfo
 }
 
-func getVehicleForecastRealtimeInfo(vehicleID int64) []map[string]interface{} {
+func getVehicleForecastRealtimeInfo(vehicleID int64) []vehicleRealtimeInfo {
 	url := fmt.Sprintf("%s/realtime/vehicletrips?vehicleIDs=%d",
 		GTFS_URL, vehicleID)
 	client := &http.Client{}
@@ -116,26 +116,23 @@ func getVehicleForecastRealtimeInfo(vehicleID int64) []map[string]interface{} {
 		log.Fatal(err)
 	}
 
-	vehicleInfo := make([]map[string]interface{}, 0)
+	vehicleInfo := make([]vehicleRealtimeInfo, 0)
 
 	for _, entity := range feed.Entity {
-		entityInfo := make(map[string]interface{})
+		var entityInfo vehicleRealtimeInfo
 
 		tripUpdate := entity.GetTripUpdate()
 		stopTimeUpdate := tripUpdate.GetStopTimeUpdate()
 
-		entityInfo["id"], _ = strconv.ParseInt(entity.GetId(), 10, 0)
-		entityInfo["forecast"] = make([]map[string]interface{},
+		entityInfo.Id, _ = strconv.ParseInt(entity.GetId(), 10, 0)
+		entityInfo.Forecast = make([]vehicleStopRealtimeInfo,
 			len(stopTimeUpdate))
 
-		stopsInfo := entityInfo["forecast"].([]map[string]interface{})
-
 		for ind, stop := range stopTimeUpdate {
-			stopsInfo[ind] = make(map[string]interface{})
-			stopsInfo[ind]["stop_id"], _ =
+			entityInfo.Forecast[ind].StopId, _ =
 				strconv.ParseInt(stop.GetStopId(), 10, 0)
-			stopsInfo[ind]["arrival"] =
-				time.Unix(stopTimeUpdate[0].GetArrival().GetTime(), 0)
+			stopTime := time.Unix(stopTimeUpdate[0].GetArrival().GetTime(), 0)
+			entityInfo.Forecast[ind].Arrival = stopTime.Format(time.UnixDate)
 		}
 
 		vehicleInfo = append(vehicleInfo, entityInfo)
@@ -144,7 +141,7 @@ func getVehicleForecastRealtimeInfo(vehicleID int64) []map[string]interface{} {
 	return vehicleInfo
 }
 
-func getVehiclePositionRealtimeInfo(params url.Values) []map[string]interface{} {
+func getVehiclePositionRealtimeInfo(params url.Values) []vehiclePositionRealtimeInfo {
 
 	reqParams := make([]string, 0)
 	if bbox, ok := params["bbox"]; ok {
@@ -183,20 +180,20 @@ func getVehiclePositionRealtimeInfo(params url.Values) []map[string]interface{} 
 		log.Fatal(err)
 	}
 
-	vehiclePositionInfo := make([]map[string]interface{}, 0)
+	vehiclePositionInfo := make([]vehiclePositionRealtimeInfo, 0)
 
 	for _, entity := range feed.Entity {
-		entityInfo := make(map[string]interface{})
+		var entityInfo vehiclePositionRealtimeInfo
 
 		vehicle := entity.GetVehicle()
 		position := vehicle.GetPosition()
 
-		entityInfo["vehicle_id"], _ = strconv.ParseInt(entity.GetId(), 10, 0)
-		entityInfo["route_id"], _ =
+		entityInfo.Id, _ = strconv.ParseInt(entity.GetId(), 10, 0)
+		entityInfo.Route_id, _ =
 			strconv.ParseInt(vehicle.GetTrip().GetRouteId(), 10, 0)
-		entityInfo["lat"] = position.GetLatitude()
-		entityInfo["lon"] = position.GetLongitude()
-		entityInfo["bearing"] = position.GetBearing()
+		entityInfo.Lat = position.GetLatitude()
+		entityInfo.Lon = position.GetLongitude()
+		entityInfo.Bearing = position.GetBearing()
 
 		vehiclePositionInfo = append(vehiclePositionInfo, entityInfo)
 	}
